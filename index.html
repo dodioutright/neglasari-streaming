@@ -1,47 +1,282 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Neglasari Streaming</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Custom CSS for elements that need more precise styling */
+        .progress-bar {
+            height: 4px;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .progress-filled {
+            height: 100%;
+            background-color: #3b82f6;
+        }
+
+        .volume-slider {
+            -webkit-appearance: none;
+            width: 80px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            background: white;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 120px;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            text-align: center;
+            border-radius: 4px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -60px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* Animation for live indicator */
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .live-pulse {
+            animation: pulse 2s infinite;
+        }
+    </style>
 </head>
-<body>
+
+<body class="bg-gray-900 text-white font-sans">
+    <div class="flex flex-col min-h-screen">
+        <!-- Header -->
+        <header class="bg-black py-4 px-6 flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-blue-400">Neglasari Streaming</h1>
+            <div class="flex items-center space-x-4">
+                <button class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md transition">
+                    Sign In
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-grow flex flex-col items-center justify-center p-4">
+            <div class="w-full max-w-4xl bg-black rounded-lg overflow-hidden shadow-2xl">
+                <!-- JW Player Container -->
+                <div class="relative">
+                    <div id="player"></div>
+
+                    <!-- Live Indicator -->
+                    <div
+                        class="absolute top-4 right-4 bg-red-600 px-2 py-1 rounded-md flex items-center live-pulse z-10">
+                        <span class="h-2 w-2 bg-white rounded-full mr-1"></span>
+                        <span class="text-xs font-bold">LIVE</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Keyboard Shortcuts Modal -->
+            <div id="shortcutsModal"
+                class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+                <div class="bg-gray-800 rounded-lg p-6 max-w-md w-full">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold">Keyboard Shortcuts</h2>
+                        <button id="closeModalBtn" class="text-gray-400 hover:text-white">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="flex justify-between">
+                            <span>Play/Pause</span>
+                            <span class="bg-gray-700 px-2 py-1 rounded">SPACE</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Increase Volume</span>
+                            <span class="bg-gray-700 px-2 py-1 rounded">↑</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Decrease Volume</span>
+                            <span class="bg-gray-700 px-2 py-1 rounded">↓</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Seek Forward</span>
+                            <span class="bg-gray-700 px-2 py-1 rounded">→</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Seek Backward</span>
+                            <span class="bg-gray-700 px-2 py-1 rounded">←</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Captions On/Off</span>
+                            <span class="bg-gray-700 px-2 py-1 rounded">C</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Fullscreen/Exit</span>
+                            <span class="bg-gray-700 px-2 py-1 rounded">F</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Mute/Unmute</span>
+                            <span class="bg-gray-700 px-2 py-1 rounded">M</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Seek %0-9</span>
+                            <span class="bg-gray-700 px-2 py-1 rounded">0-9</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 text-center">
+                        <button id="copyShortcutsBtn"
+                            class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md transition">
+                            Copy Shortcuts
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-black py-4 px-6 text-center text-gray-400 text-sm">
+            <p>© 2025 Neglasari Streaming. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <!-- JW Player Scripts -->
     <script src="//ssl.p.jwpcdn.com/player/v/8.21.0/jwplayer.js"></script>
-<script> jwplayer.key = 'XSuP4qMl+9tK17QNb+4+th2Pm9AWgMO/cYH8CI0HGGr7bdjo';
-</script>
-<div id="player"></div>
-<script>
+    <script>
+        jwplayer.key = 'XSuP4qMl+9tK17QNb+4+th2Pm9AWgMO/cYH8CI0HGGr7bdjo';
+    </script>
 
-    var playerInstance = jwplayer("player");
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Initialize JW Player
+            var playerInstance = jwplayer("player");
 
-    playerInstance.setup({
+            playerInstance.setup({
+                playlist: [{
+                    "title": "Neglasari",
+                    "sources": [
+                        {
+                            "default": true,
+                            "type": "dash",
+                            "file": 'https://tglmp04.akamaized.net/out/v1/400fc0702dee453bb33ebcc29466e58a/manifest.mpd',
+                            "drm": {
+                                "clearkey": {
+                                    "keyId": "91b9592c819246c68b3b08a1fe08ba22",
+                                    "key": "fa0d80dfd865b34077bae44cd4a0c5e6"
+                                }
+                            },
+                            "label": "0"
+                        }
+                    ]
+                }],
+                width: "100%",
+                height: "100%",
+                aspectratio: "16:9",
+                autostart: true,
+                logo: {
+                    file: '',
+                    link: '',
+                    position: 'top-right'
+                },
+                cast: {},
+                sharing: {}
+            });
 
-        playlist: [{
-            "title": "Neglasari",
-            "sources": [
-                {
-                    "default": false,
-                    "type": "dash",
-                    "file": 'https://tglmp04.akamaized.net/out/v1/400fc0702dee453bb33ebcc29466e58a/manifest.mpd',
-                    "drm": {
-                        "clearkey": { "keyId": "91b9592c819246c68b3b08a1fe08ba22", "key": "fa0d80dfd865b34077bae44cd4a0c5e6" }
-                    },
-                    "label": "0"
+            // Add error handling
+            playerInstance.on('setupError', function (event) {
+                console.error('JW Player setup error:', event);
+            });
+
+            playerInstance.on('error', function (event) {
+                console.error('JW Player error:', event);
+            });
+
+            playerInstance.on('ready', function () {
+                console.log('JW Player is ready');
+            });
+
+            // Keyboard shortcuts modal functionality
+            const shortcutsModal = document.getElementById('shortcutsModal');
+            const closeModalBtn = document.getElementById('closeModalBtn');
+            const copyShortcutsBtn = document.getElementById('copyShortcutsBtn');
+
+            // Shortcuts modal
+            if (closeModalBtn) {
+                closeModalBtn.addEventListener('click', () => {
+                    shortcutsModal.classList.add('hidden');
+                });
+            }
+
+            if (copyShortcutsBtn) {
+                copyShortcutsBtn.addEventListener('click', () => {
+                    const shortcutsText = `Keyboard Shortcuts:
+Play/Pause: SPACE
+Increase Volume: ↑
+Decrease Volume: ↓
+Seek Forward: →
+Seek Backward: ←
+Captions On/Off: C
+Fullscreen/Exit Fullscreen: F
+Mute/Unmute: M
+Seek %0-9: 0-9`;
+
+                    navigator.clipboard.writeText(shortcutsText).then(() => {
+                        const originalText = copyShortcutsBtn.textContent;
+                        copyShortcutsBtn.textContent = 'Copied!';
+                        setTimeout(() => {
+                            copyShortcutsBtn.textContent = originalText;
+                        }, 2000);
+                    });
+                });
+            }
+
+            // Global keyboard shortcut to show shortcuts modal
+            document.addEventListener('keydown', (e) => {
+                if (e.key === '?') {
+                    shortcutsModal.classList.remove('hidden');
                 }
-            ]
-        }],
-        width: "100%",
-        height: "100%",
-        aspectratio: "16:9",
-        autostart: true,
-			 logo: {
- 					 file: '',
- 					 link: '',
-  						position: 'top-right'
-  					},
-			cast:{},
-			sharing: {}
-    });
-</script>
+            });
+        });
+    </script>
 </body>
+
 </html>
